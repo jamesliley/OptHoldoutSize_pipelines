@@ -12,6 +12,10 @@
 ## This simulation works by taking the final ASPRE model (Akolekar et al, 2013)
 ##  with >55,000 samples and considering it to have optimal performance.
 
+## This script should be ran in the directory in which it is saved, or in 
+##  some directory with subdirectories 'data', 'figures'.
+## Not all figures are necessarily used in the manuscript.
+
 ######################################################################
 ## Scripts, switches and libraries                                  ##
 ######################################################################
@@ -26,7 +30,7 @@ library(matrixStats)
 library(mle.tools)
 library(OptHoldoutSize)
 
-# Save plot to file, or not
+# Save plots to file, or not
 save_plot=FALSE
 
 # Force redo: set to TRUE to regenerate all datasets from scratch
@@ -56,19 +60,8 @@ pi_intervention=0.1
 alpha=0.37
 SE_alpha=0.09
 
-
-
-
-#### Control parameters for simulation
-
-# Check these potential training set sizes (eg holdout set sizes)
-training_set_sizes=round(seq(1000,30000,length=20))
-
-# Run this many simulations at each training set size
-n_sim=50
-
-
-
+# Candidate values for n
+nval=round(seq(500,30000,length=100))
 
 
 ######################################################################
@@ -125,11 +118,8 @@ if (FALSE) {
 ## Values and errors for N and k1                                   ##
 ######################################################################
 
-# Parameters
+# Parameter calculation for N
 N=400000; SE_N=1500
-A=fpar[1]; SE_A=0
-B=-fpar[2]; SE_B=0
-C=fpar[3]; SE_C=0
 
 # Parameter calculation for k1
 NICE_sensitivity=0.2
@@ -162,9 +152,6 @@ if (!file.exists("data/aspre_parametric.RData") | force_redo) {
   for (i in 1:length(nn_par)) {
     k2_par[i]=aspre_k2(nn_par[i],X,PRE)
   }
-
-  # Candidate values for n
-  nval=round(seq(500,30000,length=100))
 
   # Starting value for theta
   theta=powersolve_general(nn_par,k2_par)$par
@@ -199,6 +186,7 @@ if (!file.exists("data/aspre_parametric.RData") | force_redo) {
 
 } else load("data/aspre_parametric.RData")
 
+for (i in 1:length(aspre_parametric)) assign(names(aspre_parametric)[i],aspre_parametric[[i]])
 
 ######################################################################
 ## Estimate power law parameters and variance                       ##
@@ -228,11 +216,11 @@ CI_OHS_ASPRE=ci_ohs(N,k1,theta,sigma=cov_par,mode = "asymptotic",grad_nstar=grad
 
 
 ######################################################################
-## Draw figure for learning curve                                   ##
+## Draw figure for cost function                                    ##
 ######################################################################
 
 
-if (save_plot) pdf("./learning_curve_estimate_param.pdf",width=4,height=4)
+if (save_plot) pdf("figures/cost_function_estimate_param.pdf",width=5,height=5)
 
 plot(0,xlim=range(nn_par),ylim=range(cc_par),type="n",
      xlab="Training set size",
@@ -251,7 +239,7 @@ legend("topright",
          "OHS",
          "OHS err."),
        lty=c(1,NA,NA,NA),lwd=c(1,NA,NA,NA),pch=c(NA,16,16,16),pt.cex=c(NA,0.5,1,2),
-       col=c("black","black","red",rgb(1,0,0,alpha=0.2)),bg="white",border=NA)
+       col=c("black","black","red",rgb(1,0,0,alpha=0.2)),bg="white",bty="n")
 
 if (save_plot) dev.off()
 
@@ -299,7 +287,7 @@ if (!file.exists("data/aspre_emulation.RData") | force_redo) {
     k2_emul=c(k2_emul,k2_new)
     s2_emul=c(s2_emul,dvar0)
     theta=powersolve_general(nn_emul,k2_emul)$par
-    print(c(i,n_new))
+    print(i)
   }
 
   # Transform estimated k2 to costs
@@ -311,11 +299,14 @@ if (!file.exists("data/aspre_emulation.RData") | force_redo) {
 
 
 } else load("data/aspre_emulation.RData")
+for (i in 1:length(aspre_emulation)) assign(names(aspre_emulation)[i],aspre_emulation[[i]])
 
 
 # Mean and variance of emulator for cost function, parametric assumptions satisfied
-p_mu=mu_fn(nval,nset=nn_emul,d=k2_emul,var_w = s2_emul,theta=theta,N=N,k1=k1,var_u=var_u,k_width=k_width,theta=theta)
-p_var=psi_fn(nval,nset=nn_emul,var_w=s2_emul,N=N,var_u=var_u,k_width=k_width,theta=theta)
+p_mu=mu_fn(nval,nset=nn_emul,d=k2_emul,var_w = s2_emul,theta=theta,
+           N=N,k1=k1,var_u=var_u,k_width=k_width)
+p_var=psi_fn(nval,nset=nn_emul,var_w=s2_emul,N=N,var_u=var_u,
+             k_width=k_width)
 
 
 ######################################################################
@@ -324,14 +315,14 @@ p_var=psi_fn(nval,nset=nn_emul,var_w=s2_emul,N=N,var_u=var_u,k_width=k_width,the
 
 OHS_ASPRE=nval[which.min(p_mu)]
 MIN_COST_ASPRE=min(p_mu)
-OHS_ERR=error_ohs_emulation(OHS,k2_emul,var_w=s2_emul,N=N,k1=k1,alpha=0.1,
+OHS_ERR=error_ohs_emulation(nn_emul,k2_emul,var_w=s2_emul,N=N,k1=k1,alpha=0.1,
                             var_u=var_u,k_width=k_width,theta=theta)
 
 ######################################################################
-## Draw figure for learning curve                                   ##
+## Draw figure for cost fuction                                     ##
 ######################################################################
 
-if (save_plot) pdf("./learning_curve_estimate_emul.pdf",width=4,height=4)
+if (save_plot) pdf("figures/cost_function_estimate_emul.pdf",width=5,height=5)
 
 plot(0,xlim=range(nn_emul),ylim=range(cc_emul),type="n",
      xlab="Training set size",
@@ -353,7 +344,7 @@ legend("topright",
          "OHS",
          "OHS err."),
        lty=c(1,1,NA,NA,NA),lwd=c(1,1,NA,NA,NA),pch=c(NA,NA,16,16,16),pt.cex=c(NA,NA,0.5,1,1),
-       col=c("black","blue","black","red",rgb(1,0,0,alpha=0.2)),bg="white",border=NA)
+       col=c("black","blue","black","red",rgb(1,0,0,alpha=0.2)),bg="white",bty="n")
 
 if (save_plot) dev.off()
 

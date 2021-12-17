@@ -3,9 +3,13 @@
 ##  population for which intervention is guided by a risk score               ##
 ################################################################################
 ##
-## Sami Haidar-Wehbe
+## Sami Haidar-Wehbe and James Liley
 ## 1 November 2021
 ##
+
+## This script should be ran in the directory in which it is saved, or in 
+##  some directory with subdirectories 'data', 'figures'.
+## Not all figures are necessarily used in the manuscript.
 
 ################################################################################
 ## Setup                                                                      ##
@@ -20,10 +24,10 @@ library("OptHoldoutSize")  # Functions for OHS estimation
 seed=1234
 set.seed(seed)
 
-## Plot location
-plot_loc="."
+# Save plots to file, or not
+save_plot=FALSE
 
-## Force redo; if FALSE, use saved data
+# Force redo: set to TRUE to regenerate all datasets from scratch
 force_redo=FALSE
 
 
@@ -79,17 +83,12 @@ set_thresh <- FALSE # Flag to estimate classification threshold
 
 # Cost estimation
 costs_tot_resample <- matrix(nrow = n_iter, ncol = num_sizes)
-costs <- seq()
 cost_type <- "gen_cost" # gen_cost = generalised cost, deaths = deaths (i.e. fn)
 cost_mat <- rbind(c(c_tn, c_fp), c(c_fn, c_tp))
 
 
 # Matrix with the number of deaths per epoch and holdout size
 costs_inter_resample <- costs_ho_resample <- matrix(nrow = n_iter, ncol = num_sizes)
-costs_inter <- costs_ho <- seq()
-
-# CHECK THIS
-old_progress <- 0
 
 
 
@@ -104,6 +103,7 @@ set.seed(seed + 1)
 coefs_general <- rnorm(npreds,sd=1/sqrt(npreds))
 coefs_base <- gen_base_coefs(coefs_general, max_base_powers = max_base_powers)
 
+old_progress=0
 if (!file.exists("data/data_example_simulation.RData")|force_redo) {
 
   for (ninters in interactions) {
@@ -116,9 +116,7 @@ if (!file.exists("data/data_example_simulation.RData")|force_redo) {
 
     for (family in families) {
 
-
       # Arrays to populate
-      costs_per_frac <- array(0, dim = c(max_base_powers, num_sizes))
       costs_tot_resample <- array(0, dim = c(max_base_powers, n_iter, num_sizes))
       costs_sd <- array(0, dim = c(max_base_powers, num_sizes))
 
@@ -210,13 +208,8 @@ if (!file.exists("data/data_example_simulation.RData")|force_redo) {
             # This "if clause" calculates the cost for each h.o. set size
             # as the number of deaths for each of them
             if (cost_type == "deaths") {
-              if (b) {
                 costs_inter_resample[b, i] <- sum(data_interv$Y == 1 & class_pred != 1)
                 costs_ho_resample[b, i] <- sum(data_hold$Y == 1 & base_pred != 1)
-              } else {
-                costs_inter[i] <- sum(data_interv$Y == 1 & class_pred != 1)
-                costs_ho[i] <- sum(data_hold$Y == 1 & base_pred != 1)
-              }
             }
 
 
@@ -230,16 +223,9 @@ if (!file.exists("data/data_example_simulation.RData")|force_redo) {
               confus_hold <- table(factor(data_hold$Y, levels=0:1),
                                    factor(base_pred, levels=0:1))
 
-              if (b) {
                 costs_inter_resample[b, i] <- sum(confus_inter * cost_mat)
                 costs_ho_resample[b, i] <- sum(confus_hold * cost_mat)
                 costs_tot_resample[base_vars, b, i] <- costs_ho_resample[b, i] + costs_inter_resample[b, i]
-              }
-              else {
-                costs_inter[i] <- sum(confus_inter * cost_mat)
-                costs_ho[i] <- sum(confus_hold * cost_mat)
-                costs_per_frac[base_vars, i] <- costs_ho[i] + costs_inter[i]
-              }
             }
 
           }
@@ -259,9 +245,6 @@ if (!file.exists("data/data_example_simulation.RData")|force_redo) {
       # Store data for this model family and number of interactions
       data_list=list(max_base_powers=max_base_powers,
                      frac_ho=frac_ho,
-                     costs_inter=costs_inter,
-                     costs_ho=costs_ho,
-                     costs_per_frac=costs_per_frac,
                      costs_tot_resample=costs_tot_resample,
                      costs_ho_resample=costs_ho_resample,
                      costs_inter_resample=costs_inter_resample,
@@ -287,9 +270,15 @@ if (!file.exists("data/data_example_simulation.RData")|force_redo) {
 
 } else load("data/data_example_simulation.RData")
 
+
+
+
+
 ################################################################################
 ## Draw plots                                                                 ##
 ################################################################################
+
+if (!save_plot) par(mfrow=c(2,2))
 
 # Loop through values of 'families' and 'interactions'
 for (xf in 1:length(families)) {
@@ -297,7 +286,7 @@ for (xf in 1:length(families)) {
     family=families[xf]
     ninters=interactions[xi]
 
-    pdf(paste0(plot_loc,"/example_simulation_",family,"_int",ninters,".pdf"),
+    if (save_plot) pdf(paste0("figures/example_simulation_",family,"_int",ninters,".pdf"),
         width=4,height=4)
 
 
@@ -322,46 +311,46 @@ for (xf in 1:length(families)) {
 
     # Create figure
     par(mar=c(4,4,3,4))
-    plot(n_ho, costs_per_frac[1, ], type = "n",
+    plot(0, 0, type = "n",
          ylab = "L(n)",
          xlab = "Holdout set size (n)",
          main=ptitle,
+         xlim=range(n_ho),
          ylim = yl
     )
 
 
     ### Draw learning curve with axis on right
 
+    # Compute
+    k2=colMeans(costs_inter_resample)/(nobs-n_ho)
+
     # Scaling
     if (xi==2) scvec=c(0.48,20) else scvec=c(0.42,20)
-    lc_sc=function(x) yl[1] + (yl[2]-yl[1])*(x-scvec[1])*scvec[2] # Scaling transform
-    i_lc_sc=function(x) (x-yl[1])/(scvec[2]*(yl[2]-yl[1])) + scvec[1] # Inverse
-
-    # Learning curve
-    lc=colMeans(costs_inter_resample)/(nobs-n_ho)
-    lines(n_ho,lc_sc(lc),col="red")
+    k2_sc=function(x) yl[1] + (yl[2]-yl[1])*(x-scvec[1])*scvec[2] # Scaling transform
+    i_k2_sc=function(x) (x-yl[1])/(scvec[2]*(yl[2]-yl[1])) + scvec[1] # Inverse
 
     # Add standard deviation. Note this is scaled by (nobs-n_ho)
-    sd_lc=colSds(costs_inter_resample)/(nobs-n_ho)
+    sd_k2=colSds(costs_inter_resample)/(nobs-n_ho)
     polygon(c(n_ho, rev(n_ho)),
-            lc_sc(c(lc + sd_lc,rev(lc-sd_lc))),
+            k2_sc(c(k2 + sd_k2,rev(k2-sd_k2))),
             col = rgb(1,0,0,alpha=r_alpha),
             border = NA)
 
     # Add axis and label
-    axis(4,at=lc_sc(pretty(i_lc_sc(yl))),labels=pretty(i_lc_sc(yl)))
+    axis(4,at=k2_sc(pretty(i_k2_sc(yl))),labels=pretty(i_k2_sc(yl)))
     mtext(expression(paste("k"[2],"(n)")), side=4, line=3)
 
 
     # Estimate parameters.
     theta=c(1,1,1);
-    for (i in 1:5) theta=powersolve(n_ho,lc,init=theta)$par
+    for (i in 1:5) theta=powersolve(n_ho,k2,init=theta)$par
     k1=median(colMeans(costs_ho_resample)/(nobs*frac_ho))
     k2=theta[1]*(n_ho)^(-theta[2]) + theta[3]
 
-    # Line for estimated learning curve
+    # Line for estimated k2 curve
     lines(n_ho,
-          lc_sc(k2),
+          k2_sc(k2),
           col="red",lty=2)
 
     # Line for estimated cost function
@@ -394,9 +383,9 @@ for (xf in 1:length(families)) {
 
 
     # Add legend
-    legend("topright", legend = c("L(n)", "SEM","Fitted",
+    legend("topright", legend = c("L(n)", "SD","Fitted",
                                   "OHS",
-                                  expression(paste("k"[2],"(n)")), "SE","Fitted",
+                                  expression(paste("k"[2],"(n)")), "SD","Fitted",
                                   "Min. L"),
            col = c("blue",rgb(0,0,1, alpha = b_alpha),"blue","black",
                    "red",rgb(1,0,0, alpha = r_alpha),"red","black"),
@@ -408,6 +397,6 @@ for (xf in 1:length(families)) {
            ncol=2
     )
 
-    dev.off()
+    if (save_plot) dev.off()
   }
 }
