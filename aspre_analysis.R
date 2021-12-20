@@ -68,7 +68,11 @@ nval=round(seq(500,30000,length=100))
 ## Mockup of real data                                              ##
 ######################################################################
 
-X=sim_random_aspre(n_aspre_total)
+# Parameters of true ASPRE dataset
+data(params_aspre)
+
+# Simulate random dataset
+X=sim_random_aspre(n_aspre_total,params=params_aspre)
 X1=add_aspre_interactions(X)
 
 # Risk will be monotonic to ASPRE risk, but we will transform to match
