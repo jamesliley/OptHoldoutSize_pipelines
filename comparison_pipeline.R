@@ -329,8 +329,8 @@ for (i in 1:length(data_nextpoint_par)) assign(names(data_nextpoint_par)[i],data
 
 ## To draw plot with first np samples of (n,k2(n))
 
-# In vignette, this is set using interactive session
-np=50 
+# In some vignettes, this is set using interactive session
+np=51 
 
 if (!save_plot) par(mfrow=c(1,2))
 yrange=c(0,100000)
@@ -369,7 +369,7 @@ legend("topright",
     "d",
     "Next pt."),
   lty=c(1,1,2,3,NA,NA),lwd=c(1,1,1,3,NA,NA),pch=c(NA,NA,NA,NA,16,124),pt.cex=c(NA,NA,NA,NA,1,1),
-  col=c("blue","red","black","black","purple","black"),bg="white",border=NA)
+  col=c("blue","red","black","black","purple","black"),bg="white",bty="n")
 
 abline(v=nset_pTRUE[np+1])
 
@@ -397,7 +397,7 @@ legend("topright",
     "d",
     "Next pt."),
   lty=c(1,1,2,3,NA,NA),lwd=c(1,1,1,3,NA,NA),pch=c(NA,NA,NA,NA,16,124),pt.cex=c(NA,NA,NA,NA,1,1),
-  col=c("blue","red","black","black","purple","black"),bg="white",border=NA)
+  col=c("blue","red","black","black","purple","black"),bg="white",bty="n")
 
 abline(v=nset_pFALSE[np+1])
 
@@ -498,7 +498,7 @@ for (i in 1:length(data_nextpoint_par)) assign(names(data_nextpoint_par)[i],data
 ## To draw plot with first np samples of (n,k2(n))
 
 # In vignette, this is set using interactive session
-np=50 
+np=51
 
 # Estimate parameters for parametric part of semi-parametric method
 theta_pTRUE=powersolve(nset_pTRUE[1:np],k2_pTRUE[1:np],y_var=var_k2_pTRUE[1:np],
@@ -535,12 +535,12 @@ lines(n,k1*n + true_k2_pTRUE(n)*(N-n),lty=3,lwd=3)
 legend("topright",
        c(expression(mu(n)),
          expression(mu(n) %+-% 3*sqrt(psi(n))),
-         "prior(n)",
+         "m(n)",
          "True",
          "d",
          "Next pt."),
        lty=c(1,1,2,3,NA,NA),lwd=c(1,1,1,3,NA,NA),pch=c(NA,NA,NA,NA,16,124),pt.cex=c(NA,NA,NA,NA,1,1),
-       col=c("blue","red","black","black","purple","black"),bg="white",border=NA)
+       col=c("blue","red","black","black","purple","black"),bg="white",bty="n")
 
 # Add vertical line at next suggested point
 nextn_pTRUE = nset_pTRUE[np+1]
@@ -564,12 +564,12 @@ lines(n,k1*n + true_k2_pFALSE(n)*(N-n),lty=3,lwd=3)
 legend("topright",
        c(expression(mu(n)),
          expression(mu(n) %+-% 3*sqrt(psi(n))),
-         "prior(n)",
+         "m(n)",
          "True",
          "d",
          "Next pt."),
        lty=c(1,1,2,3,NA,NA),lwd=c(1,1,1,3,NA,NA),pch=c(NA,NA,NA,NA,16,124),pt.cex=c(NA,NA,NA,NA,1,1),
-       col=c("blue","red","black","black","purple","black"),bg="white",border=NA)
+       col=c("blue","red","black","black","purple","black"),bg="white",bty="n")
 
 # Add vertical line at next suggested point
 nextn_pFALSE = nset_pFALSE[np+1]
@@ -725,7 +725,7 @@ plot_ci_convergence=function(title,key,M1,M2,ohs_true) {
 
   # Add legend
   legend("topright",
-    legend=key,
+    legend=key,bty="n",
     col=c("black","red"),lty=1)
 
 
