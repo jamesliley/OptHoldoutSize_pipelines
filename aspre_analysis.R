@@ -63,6 +63,9 @@ SE_alpha=0.09
 # Candidate values for n
 nval=round(seq(500,30000,length=100))
 
+# Variance and covariance parameters
+var_u=1000
+k_width=5000
 
 ######################################################################
 ## Mockup of real data                                              ##
@@ -167,7 +170,7 @@ if (!file.exists("data/aspre_parametric.RData") | force_redo) {
 
   ## Successively add new points
   for (i in 1:100) {
-    nxn=next_n(nval,nn_par,k2_par,var_w = s2_par,N=N,k1=k1,nmed=10)
+    nxn=next_n(nval,nn_par,k2_par,var_k2 = s2_par,N=N,k1=k1,nmed=10)
     if (any(is.finite(nxn))) n_new=nval[which.min(nxn)] else n_new=sample(nval,1)
     k2_new=aspre_k2(n_new,X,PRE)
     nn_par=c(nn_par,n_new)
@@ -284,7 +287,7 @@ if (!file.exists("data/aspre_emulation.RData") | force_redo) {
 
   ## Successively add new points
   for (i in 1:100) {
-    nxn = exp_imp_fn(nval,nset=nn_emul,d=k2_emul,var_w=s2_emul, N=N,k1=k1,theta=theta,var_u=var_u,k_width=k_width)
+    nxn = exp_imp_fn(nval,nset=nn_emul,d=k2_emul,var_k2=s2_emul, N=N,k1=k1,theta=theta,var_u=var_u,k_width=k_width)
     n_new = nval[which.max(nxn)]
     k2_new=aspre_k2(n_new,X,PRE)
     nn_emul=c(nn_emul,n_new)
@@ -307,9 +310,9 @@ for (i in 1:length(aspre_emulation)) assign(names(aspre_emulation)[i],aspre_emul
 
 
 # Mean and variance of emulator for cost function, parametric assumptions satisfied
-p_mu=mu_fn(nval,nset=nn_emul,d=k2_emul,var_w = s2_emul,theta=theta,
+p_mu=mu_fn(nval,nset=nn_emul,k2=k2_emul,var_k2 = s2_emul,theta=theta,
            N=N,k1=k1,var_u=var_u,k_width=k_width)
-p_var=psi_fn(nval,nset=nn_emul,var_w=s2_emul,N=N,var_u=var_u,
+p_var=psi_fn(nval,nset=nn_emul,var_k2=s2_emul,N=N,var_u=var_u,
              k_width=k_width)
 
 
@@ -319,7 +322,7 @@ p_var=psi_fn(nval,nset=nn_emul,var_w=s2_emul,N=N,var_u=var_u,
 
 OHS_ASPRE=nval[which.min(p_mu)]
 MIN_COST_ASPRE=min(p_mu)
-OHS_ERR=error_ohs_emulation(nn_emul,k2_emul,var_w=s2_emul,N=N,k1=k1,alpha=0.1,
+OHS_ERR=error_ohs_emulation(nn_emul,k2_emul,var_k2=s2_emul,N=N,k1=k1,alpha=0.1,
                             var_u=var_u,k_width=k_width,theta=theta)
 
 ######################################################################
