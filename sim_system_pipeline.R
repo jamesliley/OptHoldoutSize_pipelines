@@ -19,6 +19,7 @@
 library("dplyr")           # Syntax
 library("ranger")          # Random forests
 library("OptHoldoutSize")  # Functions for OHS estimation
+library("showtext")        # Unicode in plots
 
 ## Set seed for reproducibility
 seed=1234
@@ -286,8 +287,11 @@ for (xf in 1:length(families)) {
     family=families[xf]
     ninters=interactions[xi]
 
-    if (save_plot) pdf(paste0("figures/example_simulation_",family,"_int",ninters,".pdf"),
+    if (save_plot) {
+      showtext_auto()
+      pdf(paste0("figures/example_simulation_",family,"_int",ninters,".pdf"),
         width=4,height=4)
+    }
 
 
     X=data_example_simulation[[paste0("data_",family,"_inter",ninters)]]
@@ -312,7 +316,7 @@ for (xf in 1:length(families)) {
     # Create figure
     par(mar=c(4,4,3,4))
     plot(0, 0, type = "n",
-         ylab = "L(n)",
+         ylab = expression(paste("\u2113(n)")),
          xlab = "Holdout set size (n)",
          main=ptitle,
          xlim=range(n_ho),
@@ -364,7 +368,7 @@ for (xf in 1:length(families)) {
     minL=min(xcost)
     lines(c(ohs,ohs),c(0,minL),lty=2)
     abline(h=minL,lty=2)
-    points(ohs,minL,pch=16)
+    points(ohs,minL,pch=4)
 
     # Finally, add cost function (on top)
     # Plot Cost line
@@ -383,16 +387,16 @@ for (xf in 1:length(families)) {
 
 
     # Add legend
-    legend("topright", legend = c("L(n)", "SD","Fitted",
+    legend("topright", legend = c("\u2113(n)","Fitted",
                                   "OHS",
-                                  expression(paste("k"[2],"(n)")), "SD","Fitted",
-                                  "Min. L"),
-           col = c("blue",rgb(0,0,1, alpha = b_alpha),"blue","black",
-                   "red",rgb(1,0,0, alpha = r_alpha),"red","black"),
-           lty=c(1,NA,2,NA,
-                 1,NA,2,2),
-           pch=c(NA,16,NA,16,
-                 NA,16,NA,NA),
+                                  expression(paste("k"[2],"(n)")), "Fitted",
+                                  "Min. \u2113"),
+           col = c("blue","blue","black",
+                   "red","red","black"),
+           lty=c(1,2,NA,
+                 1,2,2),
+           pch=c(NA,NA,4,
+                 NA,NA,NA),
            bty="n",bg="white",
            ncol=2
     )
