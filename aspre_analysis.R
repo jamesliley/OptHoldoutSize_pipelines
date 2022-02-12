@@ -31,7 +31,7 @@ library(mle.tools)
 library(OptHoldoutSize)
 
 # Save plots to file, or not
-save_plot=FALSE
+save_plot=TRUE
 
 # Force redo: set to TRUE to regenerate all datasets from scratch
 force_redo=FALSE
@@ -221,6 +221,43 @@ CI_OHS_ASPRE=ci_ohs(N,k1,theta,sigma=cov_par,mode = "asymptotic",grad_nstar=grad
 
 
 
+######################################################################
+## Trace of OHS at different N using parametric algorithm           ##
+######################################################################
+
+if (!file.exists("data/aspre_trace_par.RData")) {
+  
+  ## Store OHS at various number of samples n
+  ohs_trace_par=rep(NA,length(nn_par))
+  mincost_trace_par=rep(NA,length(nn_par))
+  ci_trace_par=list()
+  
+  ## Compute, starting with 5 points
+  cov_par_sub=matrix(0,5,5);
+  cov_par_sub[1,1]=SE_N^2; cov_par_sub[2,2]=SE_k1^2
+  
+  for (i in 5:length(nn_par)) {
+    nnsub=nn_par[1:i]; k2sub=k2_par[1:i]; s2sub=s2_par[1:i]
+    thetasub=powersolve_general(nnsub,k2sub)$par
+    theta_sesub=powersolve_se(nnsub,k2sub,init=theta)
+    
+    # Optimal holdout set size and cost
+    optim_aspre_sub=optimal_holdout_size(N,k1,thetasub)
+    ohs_trace_par[i]=optim_aspre_sub$size
+    mincost_trace_par[i]=optim_aspre_sub$cost
+    
+    # Errors
+    cov_par_sub[3:5,3:5]=theta_sesub
+    ci_trace_par[[i]]=ci_ohs(N,k1,thetasub,sigma=cov_par_sub,
+                             mode = "asymptotic",
+                             grad_nstar=grad_nstar_powerlaw,alpha = 0.1)
+  }
+  
+  save(ohs_trace_par,mincost_trace_par,ci_trace_par,file="data/aspre_trace_par.RData")
+  
+} else load("data/aspre_trace_par.RData")
+
+
 
 ######################################################################
 ## Draw figure for cost function                                    ##
@@ -310,6 +347,7 @@ for (i in 1:length(aspre_emulation)) assign(names(aspre_emulation)[i],aspre_emul
 
 
 # Mean and variance of emulator for cost function, parametric assumptions satisfied
+theta=powersolve_general(nn_emul,k2_emul)$par
 p_mu=mu_fn(nval,nset=nn_emul,k2=k2_emul,var_k2 = s2_emul,theta=theta,
            N=N,k1=k1,var_u=var_u,k_width=k_width)
 p_var=psi_fn(nval,nset=nn_emul,var_k2=s2_emul,N=N,var_u=var_u,
@@ -324,6 +362,40 @@ OHS_ASPRE=nval[which.min(p_mu)]
 MIN_COST_ASPRE=min(p_mu)
 OHS_ERR=error_ohs_emulation(nn_emul,k2_emul,var_k2=s2_emul,N=N,k1=k1,alpha=0.1,
                             var_u=var_u,k_width=k_width,theta=theta)
+
+
+
+######################################################################
+## Trace of OHS at different N using emulation algorithm            ##
+######################################################################
+
+if (!file.exists("data/aspre_trace_emul.RData")) {
+  
+  ## Store OHS at various number of samples n
+  ohs_trace_emul=rep(NA,length(nn_emul))
+  mincost_trace_emul=rep(NA,length(nn_emul))
+  error_trace_emul=list()
+  
+  ## Compute, starting with 5 points
+  for (i in 5:length(nn_emul)) {
+    nnsub=nn_emul[1:i]; k2sub=k2_emul[1:i]; s2sub=s2_emul[1:i]
+    thetasub=powersolve_general(nnsub,k2sub)$par
+    musub=mu_fn(nval,nset=nnsub,k2=k2sub,var_k2 = s2sub,theta=thetasub,
+                N=N,k1=k1,var_u=var_u,k_width=k_width)
+    psisub=psi_fn(nval,nset=nnsub,var_k2=s2sub,N=N,var_u=var_u,
+                  k_width=k_width)
+    
+    ohs_trace_emul[i]=nval[which.min(musub)]
+    mincost_trace_emul=min(musub)
+    error_trace_emul[[i]]=error_ohs_emulation(nnsub,k2sub,var_k2=s2sub,N=N,k1=k1,alpha=0.1,
+                                              var_u=var_u,k_width=k_width,theta=theta)
+  }
+  
+  save(ohs_trace_emul,mincost_trace_emul,error_trace_emul,file="data/aspre_trace_emul.RData")
+  
+} else load("data/aspre_trace_emul.RData")
+
+
 
 ######################################################################
 ## Draw figure for cost fuction                                     ##
@@ -341,7 +413,7 @@ lines(nval,p_mu+3*sqrt(pmax(0,p_var)),col="blue")
 lines(nval,p_mu-3*sqrt(pmax(0,p_var)),col="blue")
 e_min=min(OHS_ERR); e_max=max(OHS_ERR); c_min=min(cc_emul); c_max=max(cc_emul);
 polygon(c(e_min,e_min,e_max,e_max),c(c_min,c_max,c_max,c_min),
-        col=rgb(1,0,0,alpha=0.2),border=NA)
+        col=rgb(0,0,1,alpha=0.2),border=NA)
 points(OHS_ASPRE,MIN_COST_ASPRE,pch=16,col="red")
 
 legend("topright",
@@ -350,9 +422,47 @@ legend("topright",
          "Est cost (d)",
          "OHS",
          "OHS err."),
-       lty=c(1,1,NA,NA,NA),lwd=c(1,1,NA,NA,NA),pch=c(NA,NA,16,16,16),pt.cex=c(NA,NA,0.5,1,1),
-       col=c("black","blue","black","red",rgb(1,0,0,alpha=0.2)),bg="white",bty="n")
+       lty=c(1,1,NA,NA,NA),lwd=c(1,1,NA,NA,NA),pch=c(NA,NA,16,16,16),pt.cex=c(NA,NA,0.5,1,2),
+       col=c("black","blue","black","red",rgb(0,0,1,alpha=0.2)),bg="white",bty="n")
 
 if (save_plot) dev.off()
 
 
+
+
+######################################################################
+## Draw figure to track OHS at various N                            ##
+######################################################################
+
+if (save_plot) pdf("figures/aspre_track.pdf",width=5,height=5)
+
+ymax=25000
+plot(0,type="n",xlim=c(0,length(nn_emul)),ylim=c(0,ymax),
+     ylab="OHS",xlab="|n|")
+lines(1:length(nn_par),ohs_trace_par,type="l",col="red")
+lines(1:length(nn_emul),ohs_trace_emul,type="l",col="blue",lty=2)
+ip=c(); ie=c()
+for (i in 1:length(nn_par)) {
+  if (length(error_trace_emul[[i]]>0)) {
+    ie=rbind(ie,range(error_trace_emul[[i]],na.rm=T))
+  } else ie=rbind(ie,c(0,ymax))
+  if (length(ci_trace_par[[i]]>0)) {
+    ip=rbind(ip,range(ci_trace_par[[i]],na.rm=T))
+  } else ip=rbind(ip,c(0,ymax))
+}
+ie[,1]=pmax(ie[,1],0); ip[,1]=pmax(ip[,1],0)
+ie[,2]=pmin(ie[,2],ymax); ip[,2]=pmin(ip[,2],ymax)
+
+# Emulation error
+polygon(c(1:length(nn_par),length(nn_par):1),c(ie[,1],rev(ie[,2])),
+        col=rgb(0,0,1,alpha=0.2),border=NA)
+# Parametric error
+polygon(c(1:length(nn_par),length(nn_par):1),c(ip[,1],rev(ip[,2])),
+        col=rgb(1,0,0,alpha=0.2),border=NA)
+
+legend("topright",c("Par. OHS","Em. OHS","Par. CI","Em. err."),
+       lty=c(1,2,NA,NA),pch=c(NA,NA,16,16),pt.cex=c(NA,NA,2,2),
+       col=c("red","blue",rgb(1,0,0,alpha=0.2),rgb(0,0,1,alpha=0.2)),
+             bty="n")
+
+if (save_plot) dev.off()

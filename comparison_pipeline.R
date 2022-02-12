@@ -684,10 +684,10 @@ save(ohs_array,file="data/ohs_array.RData")
 alpha=0.5; # Plot alpha/2,1-alpha/2 quantiles
 dd=3 # horizontal line spacing
 n_iter=dim(ohs_array)[1] # X axis range
-ymax=80000 # Y axis range
+ymax=80000 # Y axis range for upper plot
 
 # Plot drawing function
-plot_ci_convergence=function(title,key,M1,M2,ohs_true) {
+plot_ci_convergence=function(title,key,M1,M2,ohs_true,true_l) {
 
   # Set up plot parameters
   par(mar=c(1,4,4,0.1))
@@ -698,31 +698,49 @@ plot_ci_convergence=function(title,key,M1,M2,ohs_true) {
 
   # Initialise
   plot(0,xlim=c(5,n_iterx),ylim=c(0,ymax),type="n",
-    ylab="OHS and error",xaxt="n",main=title)
+    ylab="OHS",xaxt="n",main=title)
   abline(h=ohs_true,col="blue",lty=2)
 
   # Plot medians
   points(1:n_iterx,rowMedians(M1,na.rm=T),pch=16,cex=0.5,col="black")
-  points(1:n_iterx,rowMedians(M2,na.rm=T),pch=16,cex=0.5,col="red")
+  points(1:n_iterx + 1/dd,rowMedians(M2,na.rm=T),pch=16,cex=0.5,col="red")
 
-  # CIs
-  ci1=rbind(apply(M1,1,function(x) pmax(0,quantile(x,alpha/2,na.rm=T))),
+  # Ranges
+  rg1=rbind(apply(M1,1,function(x) pmax(0,quantile(x,alpha/2,na.rm=T))),
     apply(M1,1,function(x) pmin(ymax,quantile(x,1-alpha/2,na.rm=T))))
-  ci2=rbind(apply(M2,1,function(x) pmax(0,quantile(x,alpha/2,na.rm=T))),
+  rg2=rbind(apply(M2,1,function(x) pmax(0,quantile(x,alpha/2,na.rm=T))),
     apply(M2,1,function(x) pmin(ymax,quantile(x,1-alpha/2,na.rm=T))))
-
-  # Plot CIs
-  segments(
-    1:n_iterx,ci1[1,],
-    1:n_iterx,ci1[2,],
-    col="black"
-  )
-  segments(
-    1:n_iterx + 1/dd,ci2[1,],
-    1:n_iterx + 1/dd,ci2[2,],
-    col="red"
-  )
-
+  
+  # Coarsening factor: coarsen OHS estimates to nearest value
+  cfactor=1000
+  mfactor=5
+  
+  # Record lengths of rounded OHS numbers
+  nrgc1=rep(dim(M1)[2],dim(M1)[1])
+  nrgc2=rep(dim(M2)[2],dim(M2)[1])
+  
+  
+  # Plot ranges
+  for (i in 1:dim(M1)[1]) {
+    rgc1=cfactor*round(M1[i,]/cfactor)
+    t1=table(rgc1); urgc1=as.numeric(names(t1)[which(t1>mfactor)])
+    if (length(urgc1)<1) urgc1=NA
+    segments(i,urgc1-cfactor/2,
+             i,urgc1+cfactor/2)
+    if (!is.na(length(urgc1))) nrgc1[i]=length(urgc1)
+  }
+  
+  # Plot ranges
+  for (i in 1:dim(M2)[1]) {
+    rgc2=cfactor*round(M2[i,]/cfactor)
+    t2=table(rgc2); urgc2=as.numeric(names(t2)[which(t2>mfactor)])
+    if (length(urgc2)<1) urgc2=NA
+    segments(i+1/dd,urgc2-cfactor/2,
+             i+1/dd,urgc2+cfactor/2,
+             col="red")
+    if (!is.na(length(urgc2))) nrgc2[i]=length(urgc2)
+  }
+  
   # Add legend
   legend("topright",
     legend=key,bty="n",
@@ -730,18 +748,32 @@ plot_ci_convergence=function(title,key,M1,M2,ohs_true) {
 
 
   # Bottom panel setup
+  # Root mean square errors
+  rmse1=sqrt(rowMeans(true_l(M1)-true_l(ohs_true),na.rm=T)^2)
+  rmse2=sqrt(rowMeans(true_l(M2)-true_l(ohs_true),na.rm=T)^2)
+  rmse1[which(is.na(rmse1))]=max(rmse1[which(is.finite(rmse1))])
+  rmse2[which(is.na(rmse2))]=max(rmse2[which(is.finite(rmse2))])
+  rmse1=pmin(rmse1,max(max(rmse1[which(is.finite(rmse1))])))
+  rmse2=pmin(rmse2,max(max(rmse2[which(is.finite(rmse2))])))
+
+  
   par(mar=c(4,4,0.1,0.1))
   plot(0,xlim=c(5,n_iterx),
-       ylim=c(0,quantile(c(ci1[2,]-ci1[1,],ci2[2,]-ci2[1,]),0.95,na.rm=T)),
-    type="n",ylab="IQR",xlab=expression(paste("Number of estimates of k"[2],"(n)")))
+       ylim=c(0,ymax_lower),
+       type="n",ylab="RMSE(l)",xlab=expression(paste("Number of estimates of k"[2],"(n)")))
 
   # Draw lines
-  lines(1:n_iterx,ci1[2,]-ci1[1,],col="black")
-  lines(1:n_iterx,ci2[2,]-ci2[1,],col="red")
+  lines(1:n_iterx,rmse1,col="black")
+  lines(1:n_iterx,rmse2,col="red")
+  
+  #lines(1:n_iterx,rg1[2,]-rg1[1,],col="black")
+  #lines(1:n_iterx,rg2[2,]-rg2[1,],col="red")
 
 }
 
-
+# True functions l
+l_pTRUE=function(n) k1*n + true_k2_pTRUE(n)*(N-n)
+l_pFALSE=function(n) k1*n + true_k2_pFALSE(n)*(N-n)
 
 # Extract matrices from aray
 M111=ohs_array[1:n_iter,,1,1,1] # pTRUE, param algorithm, random nextpoint
@@ -765,23 +797,30 @@ true_ohs_pFALSE=nc[which.min(k1*nc + true_k2_pFALSE(nc)*(N-nc))]
 
 if (save_plot) pdf(paste0("figures/conv_comp_11.pdf"),width=4,height=4)
 
+ymax_lower=600 # Y axis range for lower plot; will vary
 plot_ci_convergence("Params. satis, param. alg.",
-  c("Rand. next n","Syst. next n"),M111[1:nmax,],M112[1:nmax,],true_ohs_pTRUE)
+  c("Rand. next n","Syst. next n"),M111[1:nmax,],M112[1:nmax,],
+  true_ohs_pTRUE,l_pTRUE)
 if (save_plot) dev.off()
 
+ymax_lower=30000 # Y axis range for lower plot
 if (save_plot) pdf(paste0("figures/conv_comp_12.pdf"),width=4,height=4)
 plot_ci_convergence("Params. not satis, param. alg.",
-  c("Rand. next n","Syst. next n"),M211[1:nmax,],M212[1:nmax,],true_ohs_pFALSE)
+  c("Rand. next n","Syst. next n"),M211[1:nmax,],M212[1:nmax,],
+  true_ohs_pFALSE,l_pFALSE)
 if (save_plot) dev.off()
 
-
+ymax_lower=600 # Y axis range for lower plot; will vary
 if (save_plot) pdf(paste0("figures/conv_comp_21.pdf"),width=4,height=4)
 plot_ci_convergence("Params. satis, emul. alg.",
-  c("Rand. next n","Syst. next n"),M121[1:nmax,],M122[1:nmax,],true_ohs_pTRUE)
+  c("Rand. next n","Syst. next n"),M121[1:nmax,],M122[1:nmax,],
+  true_ohs_pTRUE,l_pTRUE)
 if (save_plot) dev.off()
 
+ymax_lower=30000 # Y axis range for lower plot
 if (save_plot) pdf(paste0("figures/conv_comp_22.pdf"),width=4,height=4)
 plot_ci_convergence("Params. not satis, emul. alg.",
-  c("Rand. next n","Syst. next n"),M221[1:nmax,],M222[1:nmax,],true_ohs_pFALSE)
+  c("Rand. next n","Syst. next n"),M221[1:nmax,],M222[1:nmax,],
+  true_ohs_pFALSE,l_pFALSE)
 if (save_plot) dev.off()
 
