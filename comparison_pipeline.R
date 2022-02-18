@@ -22,11 +22,19 @@ set.seed(21423)
 library(OptHoldoutSize)
 
 # Save plots to file, or not
-save_plot=FALSE
+save_plot=TRUE
 
 # Force redo: set to TRUE to regenerate all datasets from scratch
 force_redo=FALSE
 
+# Make plots grayscale for main manuscript (saves under different name)
+grayscale=TRUE
+
+# Include titles and legends or not for main manuscript
+inc_title_legend=FALSE
+
+# PDF dimensions in inches
+pdf_dim=3.5
 
 ################################################################################
 ## Parameters                                                                 ##
@@ -686,24 +694,36 @@ dd=3 # horizontal line spacing
 n_iter=dim(ohs_array)[1] # X axis range
 ymax=80000 # Y axis range for upper plot
 
+if (grayscale) {
+  bw_extension = "_bw_"
+  alt_col=gray(0.5)
+  ohs_line_col=gray(0.25)
+} else {
+  bw_extension = ""
+  alt_col="red"
+  ohs_line_col="blue"
+}
+
 # Plot drawing function
 plot_ci_convergence=function(title,key,M1,M2,ohs_true,true_l) {
 
   # Set up plot parameters
-  par(mar=c(1,4,4,0.1))
+  if (inc_title_legend) par(mar=c(1,5,4,0.1)) else par(mar=c(1,5,0.5,0.1))
   layout(mat=rbind(matrix(1,4,4),matrix(2,2,4)))
 
   # Number of estimates
   n_iterx=dim(M1)[1]
 
   # Initialise
-  plot(0,xlim=c(5,n_iterx),ylim=c(0,ymax),type="n",
-    ylab="OHS",xaxt="n",main=title)
-  abline(h=ohs_true,col="blue",lty=2)
+  if (!inc_title_legend) title=""
+  plot(0,xlim=c(5,n_iterx),ylim=c(0,ymax),type="n",yaxt="n",
+    ylab="",xaxt="n",main=title)
+  axis(2,las=2); title(ylab = "Opt. holdout size", line = 4)
+  abline(h=ohs_true,col=ohs_line_col,lty=2)
 
   # Plot medians
   points(1:n_iterx,rowMedians(M1,na.rm=T),pch=16,cex=0.5,col="black")
-  points(1:n_iterx + 1/dd,rowMedians(M2,na.rm=T),pch=16,cex=0.5,col="red")
+  points(1:n_iterx + 1/dd,rowMedians(M2,na.rm=T),pch=16,cex=0.5,col=alt_col)
 
   # Ranges
   rg1=rbind(apply(M1,1,function(x) pmax(0,quantile(x,alpha/2,na.rm=T))),
@@ -737,14 +757,14 @@ plot_ci_convergence=function(title,key,M1,M2,ohs_true,true_l) {
     if (length(urgc2)<1) urgc2=NA
     segments(i+1/dd,urgc2-cfactor/2,
              i+1/dd,urgc2+cfactor/2,
-             col="red")
+             col=alt_col)
     if (!is.na(length(urgc2))) nrgc2[i]=length(urgc2)
   }
   
   # Add legend
-  legend("topright",
+  if (inc_title_legend) legend("topright",
     legend=key,bty="n",
-    col=c("black","red"),lty=1)
+    col=c("black",alt_col),lty=1)
 
 
   # Bottom panel setup
@@ -757,14 +777,16 @@ plot_ci_convergence=function(title,key,M1,M2,ohs_true,true_l) {
   rmse2=pmin(rmse2,max(max(rmse2[which(is.finite(rmse2))])))
 
   
-  par(mar=c(4,4,0.1,0.1))
+  par(mar=c(4,5,0.1,0.1))
   plot(0,xlim=c(5,n_iterx),
        ylim=c(0,ymax_lower),
-       type="n",ylab="RMSE(l)",xlab=expression(paste("Number of estimates of k"[2],"(n)")))
-
+       type="n",ylab="",yaxt="n",
+       xlab=expression(paste("Number of estimates of k"[2],"(n)")))
+  axis(2,las=2); title(ylab = "RMSE", line = 4)
+  
   # Draw lines
   lines(1:n_iterx,rmse1,col="black")
-  lines(1:n_iterx,rmse2,col="red")
+  lines(1:n_iterx,rmse2,col=alt_col)
   
   #lines(1:n_iterx,rg1[2,]-rg1[1,],col="black")
   #lines(1:n_iterx,rg2[2,]-rg2[1,],col="red")
@@ -795,7 +817,8 @@ nmax=50 # Plot up to this number of estimates.
 true_ohs_pTRUE=nc[which.min(k1*nc + true_k2_pTRUE(nc)*(N-nc))]
 true_ohs_pFALSE=nc[which.min(k1*nc + true_k2_pFALSE(nc)*(N-nc))]
 
-if (save_plot) pdf(paste0("figures/conv_comp_11.pdf"),width=4,height=4)
+if (save_plot) pdf(paste0("figures/conv_comp_11",bw_extension,".pdf"),
+                   width=pdf_dim,height=pdf_dim)
 
 ymax_lower=600 # Y axis range for lower plot; will vary
 plot_ci_convergence("Params. satis, param. alg.",
@@ -804,21 +827,24 @@ plot_ci_convergence("Params. satis, param. alg.",
 if (save_plot) dev.off()
 
 ymax_lower=30000 # Y axis range for lower plot
-if (save_plot) pdf(paste0("figures/conv_comp_12.pdf"),width=4,height=4)
+if (save_plot) pdf(paste0("figures/conv_comp_12",bw_extension,".pdf"),
+                   width=pdf_dim,height=pdf_dim)
 plot_ci_convergence("Params. not satis, param. alg.",
   c("Rand. next n","Syst. next n"),M211[1:nmax,],M212[1:nmax,],
   true_ohs_pFALSE,l_pFALSE)
 if (save_plot) dev.off()
 
 ymax_lower=600 # Y axis range for lower plot; will vary
-if (save_plot) pdf(paste0("figures/conv_comp_21.pdf"),width=4,height=4)
+if (save_plot) pdf(paste0("figures/conv_comp_21",bw_extension,".pdf"),
+                   width=pdf_dim,height=pdf_dim)
 plot_ci_convergence("Params. satis, emul. alg.",
   c("Rand. next n","Syst. next n"),M121[1:nmax,],M122[1:nmax,],
   true_ohs_pTRUE,l_pTRUE)
 if (save_plot) dev.off()
 
 ymax_lower=30000 # Y axis range for lower plot
-if (save_plot) pdf(paste0("figures/conv_comp_22.pdf"),width=4,height=4)
+if (save_plot) pdf(paste0("figures/conv_comp_22",bw_extension,".pdf"),
+                   width=pdf_dim,height=pdf_dim)
 plot_ci_convergence("Params. not satis, emul. alg.",
   c("Rand. next n","Syst. next n"),M221[1:nmax,],M222[1:nmax,],
   true_ohs_pFALSE,l_pFALSE)

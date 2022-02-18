@@ -36,6 +36,11 @@ save_plot=TRUE
 # Force redo: set to TRUE to regenerate all datasets from scratch
 force_redo=FALSE
 
+# Include legends on plots for main paper
+inc_legend=FALSE
+
+# PDF dimensions in inches
+pdf_dim=3.5
 
 ######################################################################
 ## Parameters                                                       ##
@@ -264,12 +269,13 @@ if (!file.exists("data/aspre_trace_par.RData")) {
 ######################################################################
 
 
-if (save_plot) pdf("figures/cost_function_estimate_param.pdf",width=5,height=5)
+if (save_plot) pdf("figures/cost_function_estimate_param.pdf",width=pdf_dim,height=pdf_dim)
 
 plot(0,xlim=range(nn_par),ylim=range(cc_par),type="n",
-     xlab="Training set size",
+     xlab="Training set size",yaxt="n",
      ylab=expression(paste("Total. cost ", "(", "","",
                            phantom() %prop% phantom(), " sens.", ")", "")))
+axis(2,las=2)
 points(nn_par,cc_par,pch=16,cex=0.5)
 lines(nval,k1*nval + powerlaw(nval,theta)*(N-nval))
 e_min=min(CI_OHS_ASPRE); e_max=max(CI_OHS_ASPRE); c_min=min(cc_par); c_max=max(cc_par);
@@ -277,7 +283,7 @@ polygon(c(e_min,e_min,e_max,e_max),c(c_min,c_max,c_max,c_min),
         col=rgb(1,0,0,alpha=0.2),border=NA)
 points(OHS_ASPRE,Min_cost_ASPRE,pch=16,col="red")
 
-legend("topright",
+if (inc_legend) legend("topright",
        c("Cost function",
          "Est cost (d)",
          "OHS",
@@ -401,12 +407,13 @@ if (!file.exists("data/aspre_trace_emul.RData")) {
 ## Draw figure for cost fuction                                     ##
 ######################################################################
 
-if (save_plot) pdf("figures/cost_function_estimate_emul.pdf",width=5,height=5)
+if (save_plot) pdf("figures/cost_function_estimate_emul.pdf",width=pdf_dim,height=pdf_dim)
 
 plot(0,xlim=range(nn_emul),ylim=range(cc_emul),type="n",
-     xlab="Training set size",
+     xlab="Training set size",yaxt="n",
      ylab=expression(paste("Total. cost ", "(", "","",
                            phantom() %prop% phantom(), " sens.", ")", "")))
+axis(2,las=2)
 points(nn_emul,cc_emul,pch=16,cex=0.5)
 lines(nval,p_mu)
 lines(nval,p_mu+3*sqrt(pmax(0,p_var)),col="blue")
@@ -416,7 +423,7 @@ polygon(c(e_min,e_min,e_max,e_max),c(c_min,c_max,c_max,c_min),
         col=rgb(0,0,1,alpha=0.2),border=NA)
 points(OHS_ASPRE,MIN_COST_ASPRE,pch=16,col="red")
 
-legend("topright",
+if (inc_legend) legend("topright",
        c(expression(mu(n)),
          expression(mu(n) %+-% 3*sqrt(psi(n))),
          "Est cost (d)",
@@ -434,11 +441,13 @@ if (save_plot) dev.off()
 ## Draw figure to track OHS at various N                            ##
 ######################################################################
 
-if (save_plot) pdf("figures/aspre_track.pdf",width=5,height=5)
+if (save_plot) pdf("figures/aspre_track.pdf",width=pdf_dim,height=pdf_dim)
 
 ymax=25000
+par(mar=c(5.1, 4.8, 4.1, 2.1))
 plot(0,type="n",xlim=c(0,length(nn_emul)),ylim=c(0,ymax),
-     ylab="OHS",xlab="|n|")
+     ylab="",xlab="|n|",yaxt="n")
+axis(2,las=2); title(ylab = "Opt. holdout size", line = 3.5)
 lines(1:length(nn_par),ohs_trace_par,type="l",col="red")
 lines(1:length(nn_emul),ohs_trace_emul,type="l",col="blue",lty=2)
 ip=c(); ie=c()
@@ -460,7 +469,7 @@ polygon(c(1:length(nn_par),length(nn_par):1),c(ie[,1],rev(ie[,2])),
 polygon(c(1:length(nn_par),length(nn_par):1),c(ip[,1],rev(ip[,2])),
         col=rgb(1,0,0,alpha=0.2),border=NA)
 
-legend("topright",c("Par. OHS","Em. OHS","Par. CI","Em. err."),
+if (inc_legend) legend("topright",c("Par. OHS","Em. OHS","Par. CI","Em. err."),
        lty=c(1,2,NA,NA),pch=c(NA,NA,16,16),pt.cex=c(NA,NA,2,2),
        col=c("red","blue",rgb(1,0,0,alpha=0.2),rgb(0,0,1,alpha=0.2)),
              bty="n")
