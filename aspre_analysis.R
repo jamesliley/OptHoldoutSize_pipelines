@@ -72,6 +72,10 @@ nval=round(seq(500,30000,length=100))
 var_u=1000
 k_width=5000
 
+# Logistic and logit functions
+logistic=function(x) 1/(1+exp(-x))
+logit=function(x) log(x/(1-x))
+
 ######################################################################
 ## Mockup of real data                                              ##
 ######################################################################
@@ -92,18 +96,18 @@ risk0=aspre(X1)
 # Expected sensitivity = E_{Y|scores}(sens)
 #                      = (1/(pi_intervention*n_aspre_total))*E{sum_{i:score(i)>thresh} [Y_i]}
 #                      = (1/5879)*sum_{i:score(i)>thresh} [(score(i)])
-lrisk0=logistic(risk0)
+lrisk0=logit(risk0)
 f_ab=function(ab) {
   a=ab[1]; b=ab[2]
   risk_ab=a*lrisk0 + b
-  pop_prev=mean(logit(risk_ab))
+  pop_prev=mean(logistic(risk_ab))
   q_pi=quantile(risk_ab,0.9)
-  sens=(1/(pi_intervention*n_aspre_total))*sum(logit(risk_ab)*(risk_ab>q_pi))
+  sens=(1/(pi_intervention*n_aspre_total))*sum(logistic(risk_ab)*(risk_ab>q_pi))
   return((pop_prev-pi_PRE)^2 + (sens - sens_max)^2)
 }
 abmin=optim(c(1,0),f_ab)$par
 lrisk=abmin[1]*lrisk0 +abmin[2]
-risk=logit(lrisk)
+risk=logistic(lrisk)
 
 # PRE is a 0/1 variable indicating whether that simulated patient had PRE.
 PRE=rbinom(n_aspre_total,1,prob=risk) # ASPRE=ground truth
@@ -212,7 +216,6 @@ theta_se=powersolve_se(nn_par,k2_par,init=theta)
 ## Estimate optimum holdout size and variance                       ##
 ######################################################################
 
-
 # Optimal holdout set size and cost
 optim_aspre=optimal_holdout_size(N,k1,theta)
 OHS_ASPRE=optim_aspre$size
@@ -295,7 +298,46 @@ if (save_plot) dev.off()
 
 
 
+######################################################################
+## Various summaries                                                ##
+######################################################################
 
+print("Summaries under fitted values from parametric algorithm")
+
+print(paste0("Cost (PRE risk) to an individual in the holdout set: ",
+             signif(100*k1,digits=4),"%"))
+print(paste0("Cost (PRE risk) to an individual in the intervention set: ",
+             signif(100*powerlaw(OHS_ASPRE,theta),digits=4),"%"))
+print(paste0("Mean cost (PRE risk) over current holdout set and subsequent intervention set: ",
+             signif(100*(Min_cost_ASPRE/N),digits=4),"%"))
+
+
+if (save_plot) pdf("figures/risk_per_patient.pdf",width=pdf_dim,height=pdf_dim)
+
+xseq=seq(log(50),log(15000),length=200)
+yr=100*range(c(theta[3],(Min_cost_ASPRE/N),k1*1.02))
+plot(0,type="n",xlim=range(xseq),ylim=yr,xlab="Holdout set size",ylab="PRE risk (%)",xaxt="n")
+ax=c(50,500,5000,15000)
+axis(1,at=log(ax),labels=ax)
+
+lines(xseq,100*powerlaw(round(exp(xseq)),theta))
+abline(h=100*theta[3],lwd=3)
+abline(h=100*k1,col="blue")
+abline(h=100*powerlaw(OHS_ASPRE,theta),col="blue",lty=2)
+abline(h=100*(Min_cost_ASPRE/N),col="red")
+
+nk1=((k1-theta[3])/theta[1])^(-1/theta[2])
+points(log(nk1),100*k1,pch=16)
+text(log(nk1),100*k1,round(nk1),adj=c(0,-0.5))
+
+pt=(Min_cost_ASPRE/N)
+npt=((pt-theta[3])/theta[1])^(-1/theta[2])
+points(log(npt),100*pt,pch=16)
+text(log(npt),100*pt,round(npt),adj=c(0,-0.5))
+
+points(log(OHS_ASPRE),100*powerlaw(OHS_ASPRE,theta),pch=16,col="red")
+
+if (save_plot) dev.off()
 
 ######################################################################
 ## Emulation approach: choose a set of values of n                  ##
@@ -368,6 +410,7 @@ OHS_ASPRE=nval[which.min(p_mu)]
 MIN_COST_ASPRE=min(p_mu)
 OHS_ERR=error_ohs_emulation(nn_emul,k2_emul,var_k2=s2_emul,N=N,k1=k1,alpha=0.1,
                             var_u=var_u,k_width=k_width,theta=theta)
+
 
 
 
