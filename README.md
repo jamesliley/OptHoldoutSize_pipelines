@@ -53,3 +53,5 @@ All figures will be written to PDF files in the folder ```figures```. To turn of
 If plotting to the R graphics device, figures will overplot, rather than all print simultaneously. 
 
 Some scripts print information to the console.
+
+Figures are named descriptively, rather than corresponding to manuscript position. 
