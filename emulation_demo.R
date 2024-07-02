@@ -1,6 +1,6 @@
-################################################################################
-## R script to demonstrate emulation approach to OHS estimation               ##
-################################################################################
+##*****************************************************************************#
+## R script to demonstrate emulation approach to OHS estimation             ####
+##*****************************************************************************#
 ##
 ## Sam Emerson and James Liley
 ## 21 December 2021
@@ -9,27 +9,33 @@
 ##  some directory with subdirectories 'data', 'figures'.
 ## Not all figures are necessarily used in the manuscript.
 
-######################################################################
-## Scripts, switches and libraries                                  ##
-######################################################################
+##*******************************************************************#
+## Scripts, switches and libraries                                ####
+##*******************************************************************#
 
 # Set random seed
 seed=958436
 set.seed(seed)
 
 # Libraries
-
+library(OptHoldoutSize)
 
 # Save plots to file, or not
-save_plot=FALSE
+save_plot=TRUE
 
 # Force redo: set to TRUE to regenerate all datasets from scratch
 force_redo=FALSE
 
+# Print session information
+sink("data/emulation_demo_session_info.txt")
+sessionInfo()
+sink()
 
-######################################################################
-## Parameters                                                       ##
-######################################################################
+
+
+##*******************************************************************#
+## Parameters                                                     ####
+##*******************************************************************#
 
 # Suppose we have population size and cost-per-sample without a risk score as follows
 N=100000
@@ -40,9 +46,9 @@ k_width=5000
 var_u=8000000
 
 
-######################################################################
-## Simulation                                                       ##
-######################################################################
+##*******************************************************************#
+## Simulation                                                     ####
+##*******************************************************************#
 
 
 # We begin with k2() estimates at n-values
@@ -71,9 +77,9 @@ p_var=psi_fn(n,nset=nset,N=N,var_k2 = var_k2,k_width=k_width,var_u=var_u)
 exp_imp=exp_imp_fn(n,nset=nset,k2=k2,var_k2=var_k2,N=N,k1=k1,var_u=var_u,
                    k_width=k_width)
 
-######################################################################
-## Draw figures                                                     ##
-######################################################################
+##*******************************************************************#
+## Draw figures                                                   ####
+##*******************************************************************#
 
 if (!save_plot) par(mfrow=c(1,2))
 

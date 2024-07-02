@@ -1,6 +1,6 @@
-################################################################################
-## R script to estimate parameters of learning curve for ASPRE model          ##
-################################################################################
+##***********************************************************************#
+## R script to estimate parameters of learning curve for ASPRE model  ####
+##***********************************************************************#
 ##
 ## James Liley
 ## 21 October 2021
@@ -16,9 +16,9 @@
 ##  some directory with subdirectories 'data', 'figures'.
 ## Not all figures are necessarily used in the manuscript.
 
-######################################################################
-## Scripts, switches and libraries                                  ##
-######################################################################
+##*******************************************************************#
+## Scripts, switches and libraries                                ####
+##*******************************************************************#
 
 # Set random seed
 seed=463825
@@ -42,9 +42,14 @@ inc_legend=FALSE
 # PDF dimensions in inches
 pdf_dim=3.5
 
-######################################################################
-## Parameters                                                       ##
-######################################################################
+# Print session information
+sink("data/aspre_analysis_session_info.txt")
+sessionInfo()
+sink()
+
+##*******************************************************************#
+## Parameters                                                     ####
+##*******************************************************************#
 
 
 #### ASPRE-related settings
@@ -76,9 +81,9 @@ k_width=5000
 logistic=function(x) 1/(1+exp(-x))
 logit=function(x) log(x/(1-x))
 
-######################################################################
-## Mockup of real data                                              ##
-######################################################################
+##*******************************************************************#
+## Mockup of real data                                            ####
+##*******************************************************************#
 
 # Parameters of true ASPRE dataset
 data(params_aspre)
@@ -114,9 +119,9 @@ PRE=rbinom(n_aspre_total,1,prob=risk) # ASPRE=ground truth
 
 
 
-######################################################################
-## Approximate ASPRE model with logistic model                      ##
-######################################################################
+##*******************************************************************#
+## Approximate ASPRE model with logistic model                    ####
+##*******************************************************************#
 
 ## ASPRE model performance is close enough to well-approximated by a logistic model
 if (FALSE) {
@@ -130,9 +135,9 @@ if (FALSE) {
 
 
 
-######################################################################
-## Values and errors for N and k1                                   ##
-######################################################################
+##*******************************************************************#
+## Values and errors for N and k1                                 ####
+##*******************************************************************#
 
 # Parameter calculation for N
 N=400000; SE_N=1500
@@ -154,9 +159,9 @@ SE_k1=sd(pi_0_s*(1-pi_intervention) + pi_1_s*pi_intervention*alpha_s)
 
 
 
-######################################################################
-## Parametric approach: choose a set of values of n                 ##
-######################################################################
+##*******************************************************************#
+## Parametric approach: choose a set of values of n               ####
+##*******************************************************************#
 
 if (!file.exists("data/aspre_parametric.RData") | force_redo) {
 
@@ -204,17 +209,17 @@ if (!file.exists("data/aspre_parametric.RData") | force_redo) {
 
 for (i in 1:length(aspre_parametric)) assign(names(aspre_parametric)[i],aspre_parametric[[i]])
 
-######################################################################
-## Estimate power law parameters and variance                       ##
-######################################################################
+##*******************************************************************#
+## Estimate power law parameters and variance                     ####
+##*******************************************************************#
 
 theta=powersolve_general(nn_par,k2_par)$par
 theta_se=powersolve_se(nn_par,k2_par,init=theta)
 
 
-######################################################################
-## Estimate optimum holdout size and variance                       ##
-######################################################################
+##*******************************************************************#
+## Estimate optimum holdout size and variance                     ####
+##*******************************************************************#
 
 # Optimal holdout set size and cost
 optim_aspre=optimal_holdout_size(N,k1,theta)
@@ -229,9 +234,9 @@ CI_OHS_ASPRE=ci_ohs(N,k1,theta,sigma=cov_par,mode = "asymptotic",grad_nstar=grad
 
 
 
-######################################################################
-## Trace of OHS at different N using parametric algorithm           ##
-######################################################################
+##*******************************************************************#
+## Trace of OHS at different N using parametric algorithm         ####
+##*******************************************************************#
 
 if (!file.exists("data/aspre_trace_par.RData")) {
   
@@ -267,9 +272,9 @@ if (!file.exists("data/aspre_trace_par.RData")) {
 
 
 
-######################################################################
-## Draw figure for cost function                                    ##
-######################################################################
+##*******************************************************************#
+## Draw figure for cost function                                  ####
+##*******************************************************************#
 
 
 if (save_plot) pdf("figures/cost_function_estimate_param.pdf",width=pdf_dim,height=pdf_dim)
@@ -298,9 +303,9 @@ if (save_plot) dev.off()
 
 
 
-######################################################################
-## Various summaries                                                ##
-######################################################################
+##*******************************************************************#
+## Various summaries                                              ####
+##*******************************************************************#
 
 print("Summaries under fitted values from parametric algorithm")
 
@@ -339,9 +344,9 @@ points(log(OHS_ASPRE),100*powerlaw(OHS_ASPRE,theta),pch=16,col="red")
 
 if (save_plot) dev.off()
 
-######################################################################
-## Emulation approach: choose a set of values of n                  ##
-######################################################################
+##*******************************************************************#
+## Emulation approach: choose a set of values of n                ####
+##*******************************************************************#
 
 if (!file.exists("data/aspre_emulation.RData") | force_redo) {
 
@@ -372,7 +377,7 @@ if (!file.exists("data/aspre_emulation.RData") | force_redo) {
 
   ## Successively add new points
   for (i in 1:100) {
-    nxn = exp_imp_fn(nval,nset=nn_emul,d=k2_emul,var_k2=s2_emul, N=N,k1=k1,theta=theta,var_u=var_u,k_width=k_width)
+    nxn = exp_imp_fn(nval,nset=nn_emul,k2=k2_emul,var_k2=s2_emul, N=N,k1=k1,theta=theta,var_u=var_u,k_width=k_width)
     n_new = nval[which.max(nxn)]
     k2_new=aspre_k2(n_new,X,PRE)
     nn_emul=c(nn_emul,n_new)
@@ -391,6 +396,7 @@ if (!file.exists("data/aspre_emulation.RData") | force_redo) {
 
 
 } else load("data/aspre_emulation.RData")
+
 for (i in 1:length(aspre_emulation)) assign(names(aspre_emulation)[i],aspre_emulation[[i]])
 
 
@@ -402,9 +408,9 @@ p_var=psi_fn(nval,nset=nn_emul,var_k2=s2_emul,N=N,var_u=var_u,
              k_width=k_width)
 
 
-######################################################################
-## Estimate optimum holdout size and measure of error               ##
-######################################################################
+##*******************************************************************#
+## Estimate optimum holdout size and measure of error             ####
+##*******************************************************************#
 
 OHS_ASPRE=nval[which.min(p_mu)]
 MIN_COST_ASPRE=min(p_mu)
@@ -414,9 +420,9 @@ OHS_ERR=error_ohs_emulation(nn_emul,k2_emul,var_k2=s2_emul,N=N,k1=k1,alpha=0.1,
 
 
 
-######################################################################
-## Trace of OHS at different N using emulation algorithm            ##
-######################################################################
+##*******************************************************************#
+## Trace of OHS at different N using emulation algorithm          ####
+##*******************************************************************#
 
 if (!file.exists("data/aspre_trace_emul.RData")) {
   
@@ -446,9 +452,9 @@ if (!file.exists("data/aspre_trace_emul.RData")) {
 
 
 
-######################################################################
-## Draw figure for cost fuction                                     ##
-######################################################################
+##*******************************************************************#
+## Draw figure for cost fuction                                   ####
+##*******************************************************************#
 
 if (save_plot) pdf("figures/cost_function_estimate_emul.pdf",width=pdf_dim,height=pdf_dim)
 
@@ -480,9 +486,9 @@ if (save_plot) dev.off()
 
 
 
-######################################################################
-## Draw figure to track OHS at various N                            ##
-######################################################################
+##*******************************************************************#
+## Draw figure to track OHS at various N                          ####
+##*******************************************************************#
 
 if (save_plot) pdf("figures/aspre_track.pdf",width=pdf_dim,height=pdf_dim)
 

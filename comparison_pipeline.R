@@ -1,7 +1,7 @@
-################################################################################
-## R script to draw plots for simulation on parametric vs emulation           ##
-##  algorithms.                                                               ##
-################################################################################
+##*****************************************************************************#
+## R script to draw plots for simulation on parametric vs emulation         ####
+##  algorithms.                                                             ####
+##*****************************************************************************#
 ##
 ## Sam Emerson and James Liley
 ## 1 December 2021
@@ -11,9 +11,9 @@
 ##  some directory with subdirectories 'data', 'figures'.
 ## Not all figures are necessarily used in the manuscript.
 
-################################################################################
-## Packages, seeds, switches                                                  ##
-################################################################################
+##*****************************************************************************#
+## Packages, seeds, switches                                                ####
+##*****************************************************************************#
 
 # Set random seed
 set.seed(21423)
@@ -28,7 +28,7 @@ save_plot=TRUE
 force_redo=FALSE
 
 # Make plots grayscale for main manuscript (saves under different name)
-grayscale=TRUE
+grayscale=FALSE
 
 # Include titles and legends or not for main manuscript
 inc_title_legend=FALSE
@@ -36,9 +36,15 @@ inc_title_legend=FALSE
 # PDF dimensions in inches
 pdf_dim=3.5
 
-################################################################################
-## Parameters                                                                 ##
-################################################################################
+# Print session information
+sink("data/comparison_pipeline_session_info.txt")
+sessionInfo()
+sink()
+
+
+##*****************************************************************************#
+## Parameters                                                               ####
+##*****************************************************************************#
 
 # Suppose we have population size and cost-per-sample without a risk score as follows
 N=100000
@@ -68,9 +74,9 @@ true_k2_pFALSE=function(n) powerlaw(n,theta_true) + (1e4)*dnorm(n,mean=4e4,sd=8e
 
 
 
-################################################################################
-## Plot param./nonparam forms of k2                                           ##
-################################################################################
+##*****************************************************************************#
+## Plot param./nonparam forms of k2                                         ####
+##*****************************************************************************#
 
 ## Plot forms of k2
 if (save_plot) pdf(paste0("figures/k2_params.pdf"),width=4,height=4)
@@ -107,9 +113,9 @@ if (save_plot) dev.off()
 
 
 
-################################################################################
-## True optimal holdout sizes                                                 ##
-################################################################################
+##*****************************************************************************#
+## True optimal holdout sizes                                               ####
+##*****************************************************************************#
 
 nsamp=200 # Presume we have this many estimates of k_2(n), between 1000 and N
 
@@ -157,9 +163,9 @@ print(emul_ohs_pFALSE)
 
 
 
-################################################################################
-## Resample values of d and recalculate OHS                                   ##
-################################################################################
+##*****************************************************************************#
+## Resample values of d and recalculate OHS                                 ####
+##*****************************************************************************#
 
 n_var=1000 # Resample d this many times to estimate OHS variance
 
@@ -199,9 +205,9 @@ save(ohs_resample,file="data/ohs_resample.RData")
 } else load("data/ohs_resample.RData")
 
 
-################################################################################
-## Draw figure showing estimation of OHS                                      ##
-################################################################################
+##*****************************************************************************#
+## Draw figure showing estimation of OHS                                    ####
+##*****************************************************************************#
 
 d_pt=density(ohs_resample[,"param_pTRUE"])
 d_et=density(ohs_resample[,"emul_pTRUE"])
@@ -239,9 +245,9 @@ if (save_plot) dev.off()
 
 
 
-################################################################################
-## Next point using parametrisation                                           ##
-################################################################################
+##*****************************************************************************#
+## Next point using parametrisation                                         ####
+##*****************************************************************************#
 
 if (!file.exists("data/data_nextpoint_par.RData")|force_redo) {
 
@@ -331,9 +337,9 @@ for (i in 1:length(data_nextpoint_par)) assign(names(data_nextpoint_par)[i],data
 
 
 
-################################################################################
-## Draw plots using parametrisation                                           ##
-################################################################################
+##*****************************************************************************#
+## Draw plots using parametrisation                                         ####
+##*****************************************************************************#
 
 ## To draw plot with first np samples of (n,k2(n))
 
@@ -415,9 +421,9 @@ dev.off()
 
 
 
-################################################################################
-## Next point using Bayesian emulation                                        ##
-################################################################################
+##*****************************************************************************#
+## Next point using Bayesian emulation                                      ####
+##*****************************************************************************#
 
 if (!file.exists("data/data_nextpoint_em.RData")|force_redo) {
 
@@ -499,9 +505,9 @@ save(data_nextpoint_em,file="data/data_nextpoint_em.RData")
 for (i in 1:length(data_nextpoint_par)) assign(names(data_nextpoint_par)[i],data_nextpoint_par[[i]])
 
 
-################################################################################
-## Draw plots using emulation                                                 ##
-################################################################################
+##*****************************************************************************#
+## Draw plots using emulation                                               ####
+##*****************************************************************************#
 
 ## To draw plot with first np samples of (n,k2(n))
 
@@ -589,21 +595,21 @@ if (save_plot) dev.off()
 
 
 
-################################################################################
-## Analyse convergence rate of each algorithm                                 ##
-################################################################################
+##*****************************************************************************#
+## Analyse convergence rate of each algorithm                               ####
+##*****************************************************************************#
 
 # Function to resample values of d and regenerate OHS given nset and var_k2
 ntri=function(nset,var_k2,k2,nx=100,method="MLE") {
   out=rep(0,nx)
   for (i in 1:nx) {
     k2_11=rnorm(length(nset),mean=k2(nset),sd=sqrt(var_k2))
-    theta1=powersolve(nset,d1,y_var=var_k2,lower=theta_lower,upper=theta_upper,init=theta_true)$par
+    theta1=powersolve(nset,k2_11,y_var=var_k2,lower=theta_lower,upper=theta_upper,init=theta_true)$par
     if (method=="MLE") {
       out[i]=optimal_holdout_size(N,k1,theta1)$size
     } else {
       nn=seq(1000,N,length=1000)
-      p_mu=mu_fn(nn,nset=nset,k2=k2_1,var_k2 = var_k2, N=N,k1=k1,theta=theta1)
+      p_mu=mu_fn(nn,nset=nset,k2=k2_11,var_k2 = var_k2, N=N,k1=k1,theta=theta1)
       out[i]=nn[which.min(p_mu)]
     }
   }

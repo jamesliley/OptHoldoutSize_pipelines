@@ -1,6 +1,6 @@
-##*******************************************************************###########
+##****************************************************************************##
 ## R script to demonstrate necessity of managing model updating safely      ####
-##*******************************************************************###########
+##****************************************************************************##
 ##
 ## James Liley
 ## 19 April 2022
@@ -49,7 +49,7 @@ library(MASS)
 save_plot=TRUE
 
 # Force redo: set to TRUE to regenerate all datasets from scratch
-force_redo=TRUE
+force_redo=FALSE
 
 # Include legends on plots for main paper
 inc_legend=FALSE
@@ -63,7 +63,13 @@ verbose=TRUE
 
 # Force redo: if this script has already been ran, it will save progress,
 #  speeding up recomputation. 
-force_redo=FALSE
+force_redo=TRUE
+
+# Print session information
+sink("data/updating_necessity_session_info.txt")
+sessionInfo()
+sink()
+
 
 
 ##*******************************************************************#
