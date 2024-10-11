@@ -54,6 +54,9 @@ force_redo=FALSE
 # Include legends on plots for main paper
 inc_legend=FALSE
 
+# Use greyscale
+greyscale=TRUE
+
 # PDF dimensions in inches
 pdf_width=6
 pdf_height=3.5
@@ -61,9 +64,6 @@ pdf_height=3.5
 # Print progress
 verbose=TRUE
 
-# Force redo: if this script has already been ran, it will save progress,
-#  speeding up recomputation. 
-force_redo=TRUE
 
 # Print session information
 sink("data/updating_necessity_session_info.txt")
@@ -143,7 +143,7 @@ aspre_numeric=function(n, mu_n=mu_aspre, sd_n=sd_aspre) {
 
 
 ## Define timepoints at which an update will take place (first at update_frequency)
-update_points=seq(1, n_timepoint-update_frequency,by=update_frequency) + update_frequency-1
+update_points=seq(1, n_timepoint-update_frequency+1,by=update_frequency) + update_frequency-1
 
 
 
@@ -392,6 +392,47 @@ if (!file.exists(costs_file) | force_redo) {
   
 } else load(costs_file)
 
+##*******************************************************************#
+## Colour specifications                                        ######
+##*******************************************************************#
+
+if (greyscale) {
+  
+  # pch, colour, and line type for lines/points
+  pch_none=NA; col_none=1; lty_none=1
+  pch_naive=NA; col_naive=gray(0.8); lty_naive=1
+  pch_alt=1; col_alt=gray(0.7); lty_alt=1
+  pch_semioracle=NA; col_semioracle=gray(0.6); lty_semioracle=3
+  
+  # Update points
+  col_update=gray(0); lty_update=3; lwd_update=0.5
+  
+  # pch, colour and line type for holdout
+  col_holdout=gray(seq(0.4,0.7,length.out=length(holdout_sizes)))
+  pch_holdout=rep(NA,length(holdout_sizes))
+  lty_holdout=rep(2,length(holdout_sizes))
+  
+  # overall line width
+  lwd_general=1.5
+} else {
+
+  # pch, colour, and line type for lines/points
+  pch_none=1; col_none="black"; lty_none=1
+  pch_naive=1; col_naive="red"; lty_naive=1
+  pch_alt=1; col_alt="orange"; lty_alt=1
+  pch_semioracle=1; col_semioracle="purple"; lty_semioracle=1
+  
+  # Update points
+  col_update="blue"; lty_update=2; lwd_update=1
+  
+  # pch, colour and line type for holdout
+  col_holdout=gray(seq(0.4,0.7,length.out=length(holdout_sizes)))
+  pch_holdout=rep(1,length(holdout_sizes))
+  lty_holdout=rep(1,length(holdout_sizes))
+  
+  # overall line width
+  lwd_general=1
+}
 
 
 ##*******************************************************************#
@@ -407,7 +448,9 @@ df_alt=(cost_alt-cost_oracle)/Nt
 df_semioracle=(cost_semioracle-cost_oracle)/Nt
 yr=range(c(df_orig,df_naive,df_holdout))
 
-if (save_plot) pdf("figures/updating_necessity.pdf",width=pdf_width,height=pdf_height)
+if (greyscale) pdfname="figures/updating_necessity_bw.pdf" else pdfname="figures/updating_necessity.pdf"
+if (save_plot) pdf(pdfname,width=pdf_width,height=pdf_height)
+
 par(mgp=c(4,1,0),mar=c(5,5,1,1))
 
 # Setup
@@ -420,35 +463,32 @@ axis(2,at=pxx,labels=plab,las=2)
 sx=update_frequency*(1:floor(n_timepoint/update_frequency))
 ax=1:(n_timepoint-1); axn=ax; axn[sx]=NA
 
+
 # No updating
-points(df_orig,cex=0.3)
-segments(axn,df_orig[axn],axn+1,df_orig[axn+1])
+points(df_orig,cex=0.5,pch=pch_none,col=col_none)
+segments(lwd=lwd_general,axn,df_orig[axn],axn+1,df_orig[axn+1],col=col_none,lty=lty_none)
 
 # Naive updating
-points(df_naive,cex=0.3,col="red")
-segments(axn,df_naive[axn],axn+1,df_naive[axn+1],col="red")
+points(df_naive,cex=0.5,pch=pch_naive,col=col_naive)
+segments(lwd=lwd_general,axn,df_naive[axn],axn+1,df_naive[axn+1],col=col_naive,lty=lty_naive)
 
 # Alternative updating
-points(df_alt,cex=0.3,col="orange")
-segments(axn,df_alt[axn],axn+1,df_alt[axn+1],col="orange")
+points(df_alt,cex=0.5,pch=pch_alt,col=col_alt)
+segments(lwd=lwd_general,axn,df_alt[axn],axn+1,df_alt[axn+1],col=col_alt,lty=lty_alt)
 
 # Semioracle updating
-points(df_semioracle,cex=0.3,col="purple")
-segments(axn,df_semioracle[axn],axn+1,df_semioracle[axn+1],col="purple")
-
+points(df_semioracle,cex=0.5,pch=pch_semioracle,col=col_semioracle)
+segments(lwd=lwd_general,axn,df_semioracle[axn],axn+1,df_semioracle[axn+1],col=col_semioracle,lty=lty_semioracle)
 
 # Holdout sizes
-cx=gray(0.5+(1:length(holdout_sizes))/(2*(1+length(holdout_sizes))))
-ccex=seq(0.6,0.8,length=length(holdout_sizes))
 for (i in 1:length(holdout_sizes)) {
-  points(df_holdout[,i],cex=ccex[i],col=cx[i],lty=i)
-  segments(axn,df_holdout[axn,i],axn+1,df_holdout[axn+1,],col=cx[i])
-}  
+  points(df_holdout[,i],cex=0.5,col=col_holdout[i],pch=pch_holdout[i])
+  segments(lwd=lwd_general,axn,df_holdout[axn,i],axn+1,df_holdout[axn+1,i],col=col_holdout[i],lty=lty_holdout[i])
+} 
 
-# Draw update points=}|
-
-
-segments(sx,rep(0,length(sx)),sx,rep(0.5*max(c(df_orig,df_holdout)),length(sx)),lty=2,col="blue")
+segments(sx,rep(0,length(sx)),
+         sx,rep(0.5*max(c(df_orig,df_holdout)),length(sx)),
+         lty=lty_update,col=col_update,lwd=lwd_update)
 
 # Legend
 hslab=c("None","Naive")
@@ -456,10 +496,14 @@ for (i in 1:length(holdout_sizes))
   hslab=c(hslab,as.expression(bquote("H.S:"~.(floor(holdout_sizes[i])/10000)~"x10"^5)))
 hslab=c(hslab,"Alternative","Oracle","Update")
 legend("topleft",legend=hslab,
-       pch=c(1,1,rep(1,length(holdout_sizes)),1,1,NA),
-       pt.cex=c(0.3,0.5,ccex,0.3,0.3,NA),
-       lty=c(1,1,rep(1,length(holdout_sizes)),1,1,2),
-       col=c("black","red",cx,"orange","purple","blue"),bty="n",title=" ")
+       pch=c(pch_none,pch_naive,pch_holdout,pch_alt,pch_semioracle,NA),
+       pt.cex=c(0.5,0.5,rep(0.5,length(holdout_sizes)),0.5,0.5,NA),
+       lwd=c(rep(lwd_general,4+length(holdout_sizes)),lwd_update),
+       lty=c(lty_none,lty_naive,lty_holdout,lty_alt,lty_semioracle,lty_update),
+       col=c(col_none,col_naive,col_holdout,col_alt,col_semioracle,col_update),
+       bty="n",title=" ")
+
+
 
 if (save_plot) dev.off()
 
@@ -468,7 +512,8 @@ if (save_plot) dev.off()
 ## Draw plot of cumulative costs                                  ####
 ##*******************************************************************#
 
-if (save_plot) pdf("figures/updating_necessity_cumulative.pdf",width=pdf_width,height=pdf_height)
+if (greyscale) pdfname_cumulative="figures/updating_necessity_cumulative_bw.pdf" else pdfname_cumulative="figures/updating_necessity_cumulative.pdf"
+if (save_plot) pdf(pdfname_cumulative,width=pdf_width,height=pdf_height)
 par(mgp=c(4,1,0),mar=c(5,5,1,1))
 
 # Setup
@@ -479,11 +524,11 @@ pxx=pretty(yr2); plab=c(pxx[1:(length(pxx)-1)],paste0("> ",max(pxx)))
 axis(2,at=pxx,labels=plab,las=2)
 
 # Points and lines: the 'points' function does not seem to work
-pointz=function(y,...) {
+pointz=function(y,pch=1,lty=1,...) {
   x=1:length(y)
   ax=1:(length(x)-1)
-  points(x,y,...)
-  segments(x[ax],y[ax],x[1+ax],y[1+ax],...)
+  points(x,y,pch=pch,...)
+  segments(x[ax],y[ax],x[1+ax],y[1+ax],lty=lty,...)
 }
 
 # Updating points
@@ -491,20 +536,26 @@ sx=update_frequency*(1:floor(n_timepoint/update_frequency))
 ax=1:(n_timepoint-1); axn=ax; axn[sx]=NA
 
 # Points and lines as above
-pointz(cumsum(df_orig),cex=0.3) # No update
-pointz(cumsum(df_naive),cex=0.3,col="red") # Naive update
-pointz(cumsum(df_alt),cex=0.3,col="orange") # Alternative update
-pointz(cumsum(df_semioracle),cex=0.3,col="purple") # Semioracle updating
+pointz(cumsum(df_orig),cex=0.5,
+       col=col_none,lty=lty_none,pch=pch_none) # No update
+pointz(cumsum(df_naive),cex=0.5,
+       col=col_naive,lty=lty_naive,pch=pch_naive) # Naive update
+pointz(cumsum(df_alt),cex=0.5,
+       col=col_alt,lty=lty_alt,pch=pch_alt) # Alternative update
+pointz(cumsum(df_semioracle),cex=0.5,
+       col=col_semioracle,lty=lty_semioracle,pch=pch_semioracle) # Semioracle updating
 
 # Holdout updating
 cx=gray(0.5+(1:length(holdout_sizes))/(2*(1+length(holdout_sizes))))
 ccex=seq(0.6,0.8,length=length(holdout_sizes))
 for (i in 1:length(holdout_sizes)) {
-  pointz(cumsum(df_holdout[,i]),cex=ccex[i],col=cx[i],lty=i)
+  pointz(cumsum(df_holdout[,i]),cex=0.5,
+         col=col_holdout[i],lty=lty_holdout[i],pch=pch_holdout[i])
 }  
 
 # Draw update points
-segments(sx,rep(0,length(sx)),sx,rep(0.5*sum(df_orig),length(sx)),lty=2,col="blue")
+segments(sx,rep(0,length(sx)),sx,rep(0.5*sum(df_orig),length(sx)),
+         lty=lty_update,col=col_update,lwd=lwd_update)
 
 # Legend
 hslab=c("None","Naive")
@@ -512,10 +563,12 @@ for (i in 1:length(holdout_sizes))
   hslab=c(hslab,as.expression(bquote("H.S:"~.(floor(holdout_sizes[i])/10000)~"x10"^5)))
 hslab=c(hslab,"Alternative","Oracle","Update")
 legend("topleft",legend=hslab,
-       pch=c(1,1,rep(1,length(holdout_sizes)),1,1,NA),
-       pt.cex=c(0.3,0.5,ccex,0.3,0.3,NA),
-       lty=c(1,1,rep(1,length(holdout_sizes)),1,1,2),
-       col=c("black","red",cx,"orange","purple","blue"),bty="n",title=" ")
+       pch=c(pch_none,pch_naive,pch_holdout,pch_alt,pch_semioracle,NA),
+       pt.cex=c(0.5,0.5,rep(0.5,length(holdout_sizes)),0.5,0.5,NA),
+       lwd=c(rep(lwd_general,4+length(holdout_sizes)),lwd_update),
+       lty=c(lty_none,lty_naive,lty_holdout,lty_alt,lty_semioracle,lty_update),
+       col=c(col_none,col_naive,col_holdout,col_alt,col_semioracle,col_update),
+       bty="n",title=" ")
 
 if (save_plot) dev.off()
 
